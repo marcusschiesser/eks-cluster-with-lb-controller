@@ -22,4 +22,7 @@ variable "vpc_id" {
 variable "aws_region" {
   type = string
 }
- 
+
+variable "instance_types" {
+  type = list(string)
+}

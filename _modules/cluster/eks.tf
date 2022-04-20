@@ -13,26 +13,34 @@ provider "kubernetes" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "17.24.0"
+  version = "18.20.2"
 
   cluster_name    = var.cluster_name
   cluster_version = "1.21"
 
-  subnets     = var.private_subnets
+  subnet_ids  = var.private_subnets
   vpc_id      = var.vpc_id
   enable_irsa = true
 
-  workers_additional_policies = [aws_iam_policy.worker_policy.arn]
-  worker_groups_launch_template = [{
-    name                    = "worker-group"
-    override_instance_types = ["m5.large", "m5a.large", "m4.large"]
-    spot_instance_pools     = 4
-    asg_max_size            = 5
-    asg_desired_capacity    = 2
-    kubelet_extra_args      = "--node-labels=node.kubernetes.io/lifecycle=spot"
-  }]
+  eks_managed_node_groups = {
+    workers = {
+      min_size     = 2
+      max_size     = 5
+      desired_size = 2
+
+      instance_types = var.instance_types
+    }
+  }
+
+  node_security_group_additional_rules = {
+    # This is needed for webhooks called by the Kube API, e.g. the LB controller is using a MutatingAdmissionWebhook
+    ingress_cluster_all = {
+      description                   = "Allow workers pods to receive communication from the cluster control plane."
+      protocol                      = "TCP"
+      from_port                     = 1025
+      to_port                       = 65535
+      type                          = "ingress"
+      source_cluster_security_group = true
+    }
+  }
 }
-
-
-
-

@@ -27,11 +27,34 @@ resource "aws_ec2_tag" "public_subnet_cluster_tag" {
   value       = "shared"
 }
 
-resource "aws_iam_policy" "worker_policy" {
-  name        = "LBControllerWorkerPolicy-${var.cluster_name}"
-  description = "Worker policy for the AWS Load Balancer Controller"
+module "aws_load_balancer_controller_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "4.20.1"
 
-  policy = file("${path.module}/iam-policy.json")
+  role_name                              = "aws-load-balancer-controller"
+  attach_load_balancer_controller_policy = true
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
+    }
+  }
+}
+
+resource "kubernetes_service_account" "aws_load_balancer_controller" {
+  metadata {
+    name      = "aws-load-balancer-controller"
+    namespace = "kube-system"
+    labels = {
+      "app.kubernetes.io/component" = "controller"
+      "app.kubernetes.io/name"      = "aws-load-balancer-controller"
+    }
+    annotations = {
+      "eks.amazonaws.com/role-arn"               = module.aws_load_balancer_controller_irsa_role.iam_role_arn
+      "eks.amazonaws.com/sts-regional-endpoints" = "true"
+    }
+  }
 }
 
 resource "helm_release" "aws-load-balancer-controller" {
@@ -58,4 +81,13 @@ resource "helm_release" "aws-load-balancer-controller" {
     name  = "vpcId"
     value = var.vpc_id
   }
+  set {
+    name  = "serviceAccount.create"
+    value = "false"
+  }
+  set {
+    name  = "serviceAccount.name"
+    value = kubernetes_service_account.aws_load_balancer_controller.metadata[0].name
+  }
+
 }
