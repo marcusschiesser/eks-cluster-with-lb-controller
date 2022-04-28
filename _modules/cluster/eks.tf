@@ -22,15 +22,7 @@ module "eks" {
   vpc_id      = var.vpc_id
   enable_irsa = true
 
-  eks_managed_node_groups = {
-    workers = {
-      min_size     = 2
-      max_size     = 5
-      desired_size = 2
-
-      instance_types = var.instance_types
-    }
-  }
+  eks_managed_node_groups = var.eks_managed_node_groups
 
   node_security_group_additional_rules = {
     # This is needed for webhooks called by the Kube API, e.g. the LB controller is using a MutatingAdmissionWebhook

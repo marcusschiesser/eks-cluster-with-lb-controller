@@ -7,8 +7,21 @@ module "cluster" {
   cluster_name   = "my-cluster"
   aws_region     = "eu-central-1"
   aws_account_id = "111111111111"
-  instance_types = ["m5.xlarge"]
-  vpc_id         = "vpc-11111111111111111"
+  enable_efs     = true
+  eks_managed_node_groups = {
+    workers = {
+      create_launch_template = false
+      launch_template_name   = ""
+      disk_size              = 50
+
+      min_size     = 2
+      max_size     = 5
+      desired_size = 2
+
+      instance_types = ["m5.xlarge"]
+    }
+  }
+  vpc_id = "vpc-11111111111111111"
   private_subnets = [
     "subnet-11111111111111111",
     "subnet-22222222222222222",
