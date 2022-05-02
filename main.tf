@@ -10,10 +10,6 @@ module "cluster" {
   enable_efs     = true
   eks_managed_node_groups = {
     workers = {
-      create_launch_template = false
-      launch_template_name   = ""
-      disk_size              = 50
-
       min_size     = 2
       max_size     = 5
       desired_size = 2
